@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gouly pattern builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --page: #EEF0F4;
+  --panel: #FFFFFF;
+  --panel-2: #F5F6F9;
+  --line: #D9DDE5;
+  --ink: #18202E;
+  --muted: #5D6677;
+  --accent: #B9770E;
+  --accent-ink: #FFFFFF;
+  --danger: #B3261E;
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #10151F;
+    --panel: #18202D;
+    --panel-2: #1E2736;
+    --line: #2C3749;
+    --ink: #E9E5DB;
+    --muted: #97A0B1;
+    --accent: #F2B544;
+    --accent-ink: #1A1408;
+    --danger: #F2847C;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #10151F; --panel: #18202D; --panel-2: #1E2736; --line: #2C3749;
+  --ink: #E9E5DB; --muted: #97A0B1; --accent: #F2B544; --accent-ink: #1A1408; --danger: #F2847C;
+}
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font-family: var(--font); font-size: 15px; line-height: 1.5;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Scene */
+.scene { position: relative; background: #0E1626; }
+.scene canvas { display: block; width: 100%; height: clamp(220px, 34vw, 380px); }
+.scene-bar {
+  position: absolute; left: 0; right: 0; top: 0;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 20px clamp(16px, 4vw, 40px); color: #E9E5DB; pointer-events: none;
+}
+.scene-bar h1 { margin: 0; font-size: clamp(22px, 3.2vw, 34px); font-weight: 600; letter-spacing: -0.01em; line-height: 1.1; }
+.scene-bar p { margin: 6px 0 0; color: #A9B2C3; font-size: 14px; max-width: 46ch; }
+.scene-bar .chip-btn { pointer-events: auto; }
+.chip-btn {
+  border: 1px solid rgba(233,229,219,0.35); background: rgba(14,22,38,0.55); color: #E9E5DB;
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; white-space: nowrap;
+}
+.preview-note { position: absolute; left: clamp(16px, 4vw, 40px); bottom: 12px; color: #8F99AC; font-size: 13px; margin: 0; }
+
+/* Layout */
+main {
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 24px; padding: 24px clamp(16px, 4vw, 40px) 48px; max-width: 1280px; margin: 0 auto;
+}
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+h2 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.hint { color: var(--muted); font-size: 13.5px; margin: 0; }
+.stack > * + * { margin-top: 16px; }
+label.field { display: block; }
+label.field > span { display: block; font-size: 13.5px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"], input[type="number"], input[type="search"], select {
+  width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+}
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel-2); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.small { padding: 4px 10px; font-size: 13.5px; }
+
+/* Zones */
+.zone { border: 1px solid var(--line); border-radius: 10px; padding: 16px; background: var(--panel); }
+.zone.active { border-color: var(--accent); }
+.zone-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.zone-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.zone-tab { border-radius: 999px; padding: 4px 12px; }
+.zone-tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* Bulbs */
+.bulbs { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 4px 0; }
+.bulb {
+  width: 34px; height: 34px; border-radius: 50%; cursor: pointer; position: relative;
+  border: 2px solid transparent; padding: 0;
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.bulb.off { background: repeating-linear-gradient(45deg, var(--panel-2) 0 4px, var(--line) 4px 6px) !important; }
+.bulb[aria-pressed="true"] { border-color: var(--accent); }
+.bulb .w { position: absolute; right: -4px; bottom: -4px; font-size: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0 3px; }
+.add-bulb { width: 34px; height: 34px; border-radius: 50%; border: 1px dashed var(--muted); background: transparent; cursor: pointer; font-size: 18px; color: var(--muted); }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+.bulb-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: var(--panel-2); border-radius: 10px; padding: 12px; }
+.bulb-tools input[type="color"] { width: 44px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: none; padding: 2px; cursor: pointer; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+
+/* Lists */
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .folder { color: var(--muted); font-size: 13px; }
+.strip { display: flex; gap: 2px; flex: none; }
+.strip i { width: 9px; height: 9px; border-radius: 50%; display: block; box-shadow: 0 0 0 1px var(--line); }
+.results { max-height: 280px; overflow-y: auto; }
+.status { font-size: 13.5px; padding: 10px 12px; border-radius: 8px; background: var(--panel-2); }
+.status.error { color: var(--danger); }
+.effect-name { display: flex; gap: 8px; align-items: center; }
+.effect-name code { flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13.5px; overflow-x: auto; white-space: nowrap; }
+.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--panel); padding: 10px 16px; border-radius: 10px; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <canvas id="scene" aria-label="Preview of the pattern on a roofline"></canvas>
+  <div class="scene-bar">
+    <div>
+      <h1 id="sceneTitle">New pattern</h1>
+      <p id="sceneSub">Each dot is one bulb. Static patterns repeat bulb by bulb along the whole string.</p>
+    </div>
+    <button class="chip-btn" id="playBtn" type="button">Pause</button>
+  </div>
+  <p class="preview-note" id="previewNote"></p>
+</div>
+
+<main>
+  <section class="panel stack" aria-labelledby="editorHeading">
+    <div>
+      <h2 id="editorHeading">Pattern</h2>
+      <p class="hint">Pick the bulbs that repeat, then an effect. Most patterns need just one zone.</p>
+    </div>
+
+    <label class="field"><span>Name</span>
+      <input type="text" id="nameInput" maxlength="60" placeholder="Green and white">
+    </label>
+
+    <div>
+      <div class="zone-head" style="margin-bottom:8px">
+        <h3>Zones</h3>
+        <button class="btn small" id="addZoneBtn" type="button">Split into another zone</button>
+      </div>
+      <div class="zone-tabs" id="zoneTabs"></div>
+    </div>
+
+    <div class="zone active" id="zoneEditor"></div>
+
+    <div class="row">
+      <button class="btn primary" id="saveBtn" type="button">Save to My Patterns</button>
+      <button class="btn" id="newBtn" type="button">Start a new pattern</button>
+    </div>
+    <div id="effectNameBox" hidden>
+      <p class="hint" style="margin-bottom:6px">Effect name in Home Assistant, for automations and <code>gouly.apply_preset</code>:</p>
+      <div class="effect-name"><code id="effectName"></code><button class="btn small" id="copyNameBtn" type="button">Copy</button></div>
+    </div>
+  </section>
+
+  <div class="stack">
+    <section class="panel stack" aria-labelledby="libHeading">
+      <div>
+        <h2 id="libHeading">Your preset library</h2>
+        <p class="hint">Open the <code>gouly_presets.json</code> you uploaded to Home Assistant. Your patterns are saved into it as a “1 My Patterns” folder, which sorts to the top of the list.</p>
+      </div>
+      <div class="row">
+        <label class="btn" style="text-align:center">
+          Open gouly_presets.json
+          <input type="file" id="fileInput" accept=".json,application/json" hidden>
+        </label>
+      </div>
+      <div class="status" id="libStatus">No library open yet. You can still design and preview patterns.</div>
+    </section>
+
+    <section class="panel stack" aria-labelledby="mineHeading">
+      <div>
+        <h2 id="mineHeading">My Patterns</h2>
+        <p class="hint">Saving with an existing name replaces that pattern.</p>
+      </div>
+      <ul class="list" id="mineList"></ul>
+      <div class="row">
+        <button class="btn primary" id="exportBtn" type="button" disabled>Download updated library</button>
+        <button class="btn" id="copyJsonBtn" type="button" disabled>Copy My Patterns JSON</button>
+      </div>
+      <p class="hint" id="exportHint">Open your library first to download an updated copy.</p>
+    </section>
+
+    <section class="panel stack" aria-labelledby="startHeading">
+      <div>
+        <h2 id="startHeading">Start from an existing preset</h2>
+        <p class="hint">Search the library, then edit a copy.</p>
+      </div>
+      <input type="search" id="searchInput" placeholder="Celtics, Christmas, Pacman…" disabled>
+      <ul class="list results" id="results"></ul>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+// ---------- Constants (from the ha-gouly integration) ----------
+const DESIGN_TOTAL = 800;          // library presets are designed for 800 LEDs and scaled to fit
+const MY_FOLDER = "1 My Patterns";  // the integration sorts folders by name; "1" puts it first
+const OLD_FOLDERS = ["My Patterns"]; // earlier name, carried over when a library is opened
+const PALETTE_MAX = 16;            // a segment frame carries up to 16 palette entries
+const CUSTOM_PALETTE_ID = 9000;    // ids above 255 are sent as 255, like most library palettes
+
+const EFFECTS = {0:"Static",1:"Android",2:"Aurora",3:"Blends",4:"Blink",5:"Blink Rainbow",6:"Bouncing Balls",7:"BPM",8:"Breath",9:"Candle",10:"Candle Multi",11:"Chase Color",12:"Running Color",13:"Tricolor Chase",14:"Chase Flash",15:"Chase Flash Random",16:"Chase Rainbow",17:"Chase Random",18:"Chun Chun",19:"Colorful",20:"Color Twinkle",21:"Color Waves",22:"Dancing Shadows",23:"Dissolve",24:"Dissolve Random",25:"Dynamic",26:"Dynamic Smooth",27:"Fade",28:"Fairy",29:"Fairy Twinkle",30:"Fill Noise",31:"Fire 2012",32:"Fire Flicker",33:"Fireworks 1d",34:"Star Burst",35:"Fireworks",36:"Flow",37:"Flow Stripe",38:"Glitter",39:"Gradient",40:"Halloween",41:"Halloween Eyes",42:"Heart Beat",43:"ICU",44:"Juggle",45:"Lake",46:"Light House",47:"Lightning",48:"Light Loading",49:"Meteor Smooth",50:"Meteor",51:"Multi Comet",52:"Noise 1",53:"Noise 2",54:"Noise 3",55:"Noise 4",56:"Noise Pal",57:"Oscillate",58:"Pacifica",59:"Palette",60:"Percent",61:"Perlin Move",62:"Phased",63:"Phased Noise",64:"Plasma",65:"Police",66:"Popcorn",67:"Pride 2015",68:"Railway",69:"Rain",70:"Rainbow Runner",71:"Rainbow",72:"Random Color",73:"Ripple",74:"Ripple Rainbow",75:"Running Dual",76:"Running",77:"Saw",78:"Dual Scan",79:"Scan",80:"Scanner",81:"Dual Scanner",82:"Sine",83:"Sinelon",84:"Sinelon Dual",85:"Sinelon Rainbow",86:"Solid Glitter",87:"Solid Pattern Tri",88:"Solid Pattern",89:"Sparkle Dark",90:"Hyper Sparkle",91:"Sparkle",92:"Spots Fade",93:"Spots",94:"Stream",95:"Stream2",96:"Strobe Mega",97:"Strobe Rainbow",98:"Strobe",99:"Sunrise",100:"Sweep Random",101:"Sweep",102:"TV Simulator",103:"Tetrix",104:"Theater Chase Rainbow",105:"Theater Chase",106:"Traffic Light",107:"Tricolor Fade",108:"Tricolor Wipe",109:"Twinkle",110:"Twinkle Cat",111:"Twinkle Fox",112:"Twinkle Up",113:"Two Dots",114:"Washing Machine",115:"Wavesins",116:"Wipe Random",117:"Wipe",141:"Breathing",142:"Gradual",143:"Chase",144:"Marquee",145:"Flowing",146:"Around",147:"Star",148:"Stack",149:"Fireworks",150:"Ghost",151:"Multi Pulse",152:"Expanse",153:"Wave",154:"Pacman",155:"IsoFade",156:"Gradient",157:"Spotlight",158:"Flicker",159:"Glitch",160:"Sway",161:"Roll",162:"Extend"};
+// Gouly's own effects plus the ones its library uses most, for the top of the menu.
+const FEATURED = [0,143,144,145,146,153,154,161,162,141,142,147,150,151,152,155,157,158,159,160,148,149,156];
+const BREATHE = new Set([8,27,141,142,151,155,42,92,107]);
+const TWINKLE = new Set([9,10,20,28,29,38,86,89,90,91,109,110,111,112,147,150,158,159,35,149,33,34,66,47]);
+
+const SWATCHES = [
+  ["White", [255,255,255]], ["Warm white", [255,180,107]], ["Green", [0,255,82]], ["Celtic green", [0,131,72]],
+  ["Red", [255,0,0]], ["Orange", [255,120,0]], ["Gold", [255,193,42]], ["Yellow", [255,247,0]],
+  ["Blue", [0,0,255]], ["Sky", [0,180,255]], ["Purple", [140,40,230]], ["Pink", [255,60,170]]
+];
+
+// ---------- State ----------
+let library = null;            // parsed gouly_presets.json
+let myPatterns = [];           // presets in the My Patterns folder (file format)
+let draft = newDraft();
+let activeZone = 0;
+let selectedBulb = 0;
+let playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let searchIndex = [];
+
+function newDraft() {
+  return { name: "", zones: [newZone(0, 100)] };
+}
+function newZone(start, end, bulbs) {
+  return { start, end, effect: 0, speed: 128, width: 179, direction: 0,
+    bulbs: bulbs || [bulb([0,255,82]), bulb([255,255,255])] };
+}
+function bulb(rgb, ww = 0, cw = 0) { return { rgb: rgb.slice(0,3), ww, cw }; }
+function isOff(b) { return !b.rgb.some(Boolean) && !b.ww && !b.cw; }
+
+// ---------- Conversion to and from the library format ----------
+function toPreset(d) {
+  return {
+    name: d.name.trim(),
+    total: DESIGN_TOTAL,
+    zones: d.zones.map(z => {
+      const start = Math.round(z.start / 100 * DESIGN_TOTAL);
+      const end = Math.max(start, Math.round(z.end / 100 * DESIGN_TOTAL) - 1);
+      return {
+        start, end, effect: z.effect, speed: z.speed, width: z.width, brightness: 255,
+        direction: z.direction, on: true,
+        colours: [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
+        palette: CUSTOM_PALETTE_ID,
+        palette_colours: z.bulbs.map(b => [...b.rgb, b.ww, b.cw, 255])
+      };
+    })
+  };
+}
+
+function presetBulbs(zone) {
+  let pal = zone.palette_colours || (library && library.palettes && library.palettes[String(zone.palette)]) || [];
+  if (!pal.length) pal = (zone.colours || []).filter(c => c.some(Boolean)).map(c => [...c, 255]);
+  if (!pal.length) pal = [[255,255,255,0,0,255]];
+  return pal.slice(0, PALETTE_MAX).map(c => {
+    const k = (c[5] ?? 255) / 255;
+    return bulb([c[0]*k, c[1]*k, c[2]*k].map(Math.round), Math.round((c[3]||0)*k), Math.round((c[4]||0)*k));
+  });
+}
+
+function fromPreset(p) {
+  const total = p.total || DESIGN_TOTAL;
+  const pct = v => Math.round(v / total * 1000) / 10;
+  return {
+    name: p.name,
+    zones: p.zones.map(z => ({
+      start: pct(z.start), end: Math.min(100, pct(z.end + 1)),
+      effect: z.effect, speed: clamp(z.speed, 0, 255), width: z.width ?? 179,
+      direction: z.direction ? 1 : 0, bulbs: presetBulbs(z)
+    }))
+  };
+}
+
+// ---------- Helpers ----------
+const $ = id => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number(v) || 0));
+const hex = rgb => "#" + rgb.map(v => v.toString(16).padStart(2, "0")).join("");
+const fromHex = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+function displayRgb(b) {
+  // Show white channels as a warm/cool white tint so W-only bulbs aren't drawn as off.
+  let [r,g,bl] = b.rgb;
+  r = Math.min(255, r + b.ww + b.cw * 0.9); g = Math.min(255, g + b.ww * 0.75 + b.cw); bl = Math.min(255, bl + b.ww * 0.45 + b.cw);
+  return [r,g,bl].map(Math.round);
+}
+function css(b) { return isOff(b) ? "transparent" : `rgb(${displayRgb(b).join(",")})`; }
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids) if (kid != null) e.append(kid);
+  return e;
+}
+
+// ---------- Editor rendering ----------
+function renderZoneTabs() {
+  const tabs = $("zoneTabs"); tabs.replaceChildren();
+  if (draft.zones.length === 1) { tabs.append(el("p", { class: "hint" }, "One zone covering the whole string.")); return; }
+  draft.zones.forEach((z, i) => {
+    tabs.append(el("button", { class: "btn small zone-tab", type: "button", "aria-pressed": String(i === activeZone),
+      onclick: () => { activeZone = i; selectedBulb = 0; renderEditor(); } },
+      `Zone ${i + 1}: ${z.start}–${z.end}%`));
+  });
+}
+
+function effectSelect(z) {
+  const sel = el("select", { id: "effectSel", onchange: e => { z.effect = Number(e.target.value); renderAll(); } });
+  const g1 = el("optgroup", { label: "Gouly effects" });
+  FEATURED.forEach(id => g1.append(el("option", { value: id }, id === 0 ? "Static (repeating pattern)" : EFFECTS[id])));
+  const g2 = el("optgroup", { label: "Classic effects" });
+  Object.keys(EFFECTS).map(Number).filter(id => !FEATURED.includes(id))
+    .sort((a, b) => EFFECTS[a].localeCompare(EFFECTS[b])).forEach(id => g2.append(el("option", { value: id }, EFFECTS[id])));
+  sel.append(g1, g2); sel.value = String(z.effect);
+  return sel;
+}
+
+function renderEditor() {
+  renderZoneTabs();
+  const z = draft.zones[activeZone];
+  const box = $("zoneEditor"); box.replaceChildren();
+
+  if (draft.zones.length > 1) {
+    box.append(el("div", { class: "zone-head" },
+      el("h3", {}, `Zone ${activeZone + 1}`),
+      el("button", { class: "btn small danger", type: "button", onclick: removeZone }, "Remove zone")));
+    const startIn = el("input", { type: "number", min: 0, max: 99, step: 0.5, value: z.start,
+      onchange: e => { z.start = clamp(e.target.value, 0, z.end - 0.5); renderAll(); } });
+    const endIn = el("input", { type: "number", min: 1, max: 100, step: 0.5, value: z.end,
+      onchange: e => { z.end = clamp(e.target.value, z.start + 0.5, 100); renderAll(); } });
+    box.append(el("div", { class: "row", style: "margin-bottom:16px" },
+      el("label", { class: "field" }, el("span", {}, "Starts at (% of string)"), startIn),
+      el("label", { class: "field" }, el("span", {}, "Ends at (% of string)"), endIn)));
+  }
+
+  // Bulbs
+  const bulbs = el("div", { class: "bulbs", role: "group", "aria-label": "Repeating bulbs" });
+  z.bulbs.forEach((b, i) => {
+    const btn = el("button", { type: "button", class: "bulb" + (isOff(b) ? " off" : ""), "aria-pressed": String(i === selectedBulb),
+      "aria-label": `Bulb ${i + 1}${isOff(b) ? ", off" : ""}`, title: `Bulb ${i + 1}`,
+      onclick: () => { selectedBulb = i; renderEditor(); } });
+    btn.style.background = css(b);
+    if (b.ww || b.cw) btn.append(el("span", { class: "w", "aria-hidden": "true" }, "W"));
+    bulbs.append(btn);
+  });
+  if (z.bulbs.length < PALETTE_MAX) {
+    bulbs.append(el("button", { type: "button", class: "add-bulb", "aria-label": "Add a bulb", title: "Add a bulb",
+      onclick: () => { const src = z.bulbs[selectedBulb] || z.bulbs[z.bulbs.length - 1];
+        z.bulbs.push(bulb(src.rgb, src.ww, src.cw)); selectedBulb = z.bulbs.length - 1; renderAll(); } }, "+"));
+  }
+  const sb = z.bulbs[selectedBulb] || z.bulbs[0];
+  const picker = el("input", { type: "color", value: hex(sb.rgb), "aria-label": "Bulb colour",
+    oninput: e => { sb.rgb = fromHex(e.target.value); sb.ww = 0; sb.cw = 0; renderAll(); } });
+  const sw = el("div", { class: "swatches" });
+  SWATCHES.forEach(([n, rgb]) => {
+    const s = el("button", { type: "button", class: "swatch", title: n, "aria-label": n,
+      onclick: () => { sb.rgb = rgb.slice(); sb.ww = 0; sb.cw = 0; renderAll(); } });
+    s.style.background = hex(rgb); sw.append(s);
+  });
+  const tools = el("div", { class: "bulb-tools" },
+    el("strong", { style: "font-weight:600" }, `Bulb ${selectedBulb + 1}`), picker, sw,
+    el("button", { type: "button", class: "btn small", onclick: () => { sb.rgb = [0,0,0]; sb.ww = 0; sb.cw = 0; renderAll(); } }, "Off"),
+    el("button", { type: "button", class: "btn small danger", disabled: z.bulbs.length <= 1,
+      onclick: () => { z.bulbs.splice(selectedBulb, 1); selectedBulb = Math.max(0, selectedBulb - 1); renderAll(); } }, "Remove"));
+
+  box.append(
+    el("label", { class: "field" }, el("span", {}, `Repeating bulbs (${z.bulbs.length} of ${PALETTE_MAX})`)),
+    bulbs, el("div", { style: "height:10px" }), tools,
+    el("div", { style: "height:16px" }));
+
+  // Effect
+  const speedIn = el("input", { type: "range", min: 1, max: 255, value: z.speed, "aria-label": "Speed",
+    oninput: e => { z.speed = Number(e.target.value); speedOut.textContent = z.speed; } });
+  const speedOut = el("span", {}, String(z.speed));
+  const dirIn = el("select", { onchange: e => { z.direction = Number(e.target.value); } },
+    el("option", { value: 0 }, "Forward"), el("option", { value: 1 }, "Reverse"));
+  dirIn.value = String(z.direction);
+  const widthIn = el("input", { type: "number", min: 0, max: 255, value: z.width,
+    onchange: e => { z.width = clamp(e.target.value, 0, 255); e.target.value = z.width; } });
+
+  box.append(
+    el("div", { class: "row" },
+      el("label", { class: "field" }, el("span", {}, "Effect"), effectSelect(z)),
+      el("label", { class: "field" }, el("span", {}, "Direction"), dirIn)),
+    el("div", { style: "height:12px" }),
+    el("label", { class: "field" }, el("span", {}, "Speed ", speedOut), speedIn),
+    el("div", { style: "height:8px" }),
+    el("details", {}, el("summary", {}, "Advanced"),
+      el("div", { style: "height:8px" }),
+      el("label", { class: "field" }, el("span", {}, "Width (used by some moving effects; most library presets use 179)"), widthIn)));
+}
+
+function renderMine() {
+  const list = $("mineList"); list.replaceChildren();
+  if (!myPatterns.length) list.append(el("li", { class: "empty" }, "No patterns yet. Save one from the editor."));
+  myPatterns.forEach((p, i) => {
+    list.append(el("li", {}, strip(p), el("span", { class: "name" }, p.name),
+      el("button", { class: "btn small", type: "button", onclick: () => loadDraft(fromPreset(p)) }, "Edit"),
+      el("button", { class: "btn small danger", type: "button",
+        onclick: () => { myPatterns.splice(i, 1); renderMine(); toast(`Deleted “${p.name}”`); } }, "Delete")));
+  });
+  $("exportBtn").disabled = !library;
+  $("copyJsonBtn").disabled = !myPatterns.length;
+  $("exportHint").textContent = library
+    ? "Upload the downloaded file in Home Assistant: Settings > Devices & services > Gouly > Configure."
+    : "Open your library first to download an updated copy.";
+}
+
+function strip(p) {
+  const s = el("span", { class: "strip", "aria-hidden": "true" });
+  presetBulbs(p.zones[0]).slice(0, 8).forEach(b => { const i = el("i"); i.style.background = isOff(b) ? "var(--line)" : css(b); s.append(i); });
+  return s;
+}
+
+function renderAll() {
+  renderEditor();
+  $("sceneTitle").textContent = draft.name.trim() || "New pattern";
+  const effects = [...new Set(draft.zones.map(z => z.effect))];
+  $("previewNote").textContent = effects.every(e => e === 0)
+    ? "Static patterns preview exactly as they repeat on your lights."
+    : "Motion is a rough preview; the bulb colours and order are exact.";
+  const saved = myPatterns.some(p => p.name === draft.name.trim());
+  $("effectNameBox").hidden = !saved;
+  $("effectName").textContent = `${MY_FOLDER} / ${draft.name.trim()}`;
+}
+
+function loadDraft(d) {
+  draft = d; activeZone = 0; selectedBulb = 0;
+  $("nameInput").value = d.name;
+  renderAll(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function removeZone() {
+  draft.zones.splice(activeZone, 1);
+  activeZone = Math.max(0, activeZone - 1); selectedBulb = 0;
+  if (draft.zones.length === 1) { draft.zones[0].start = 0; draft.zones[0].end = 100; }
+  renderAll();
+}
+
+// ---------- Actions ----------
+$("nameInput").addEventListener("input", e => { draft.name = e.target.value; renderAll(); });
+
+$("addZoneBtn").addEventListener("click", () => {
+  const z = draft.zones[activeZone];
+  const mid = Math.round((z.start + z.end) / 2 * 2) / 2;
+  if (mid <= z.start || mid >= z.end) { toast("This zone is too small to split."); return; }
+  const copy = JSON.parse(JSON.stringify(z));
+  copy.start = mid; z.end = mid;
+  draft.zones.splice(activeZone + 1, 0, copy);
+  activeZone += 1; selectedBulb = 0; renderAll();
+});
+
+$("saveBtn").addEventListener("click", () => {
+  const name = draft.name.trim();
+  if (!name) { toast("Give the pattern a name first."); $("nameInput").focus(); return; }
+  if (name.includes(" / ")) { toast("Names can’t contain “ / ”."); return; }
+  const preset = toPreset(draft);
+  const i = myPatterns.findIndex(p => p.name === name);
+  if (i >= 0) myPatterns[i] = preset; else myPatterns.push(preset);
+  renderMine(); renderAll();
+  toast(i >= 0 ? `Replaced “${name}”` : `Saved “${name}”`);
+});
+
+$("newBtn").addEventListener("click", () => loadDraft(newDraft()));
+
+$("copyNameBtn").addEventListener("click", () => copyText($("effectName").textContent, "Copied the effect name"));
+
+$("fileInput").addEventListener("change", async e => {
+  const file = e.target.files[0]; e.target.value = "";
+  if (!file) return;
+  const status = $("libStatus");
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.version !== 1 || typeof data.folders !== "object" || !data.folders) throw new Error("This isn’t a Gouly preset library (expected version 1 with folders).");
+    library = data;
+    // Keep patterns saved in this session before the library was opened; they win over the file's copies.
+    const fromFile = [MY_FOLDER, ...OLD_FOLDERS].flatMap(f => Array.isArray(data.folders[f]) ? data.folders[f] : [])
+      .filter((p, i, all) => all.findIndex(q => q.name === p.name) === i).map(p => JSON.parse(JSON.stringify(p)));
+    const sessionNames = new Set(myPatterns.map(p => p.name));
+    myPatterns = [...fromFile.filter(p => !sessionNames.has(p.name)), ...myPatterns];
+    searchIndex = Object.entries(data.folders).flatMap(([folder, ps]) =>
+      folder === MY_FOLDER || OLD_FOLDERS.includes(folder) ? [] : ps.map(p => ({ folder, p, key: (folder + " " + p.name).toLowerCase() })));
+    const count = Object.values(data.folders).reduce((n, v) => n + v.length, 0);
+    status.className = "status";
+    status.textContent = `Opened ${file.name}: ${count.toLocaleString()} presets in ${Object.keys(data.folders).length} folders` +
+      (myPatterns.length ? `, including ${myPatterns.length} of yours.` : ".");
+    $("searchInput").disabled = false;
+    renderMine(); renderAll(); renderResults();
+  } catch (err) {
+    status.className = "status error";
+    status.textContent = err instanceof SyntaxError ? "That file isn’t valid JSON." : err.message;
+  }
+});
+
+$("exportBtn").addEventListener("click", () => {
+  if (!library) return;
+  const name = draft.name.trim();
+  if (name) {
+    const saved = myPatterns.find(p => p.name === name);
+    const same = saved && JSON.stringify(toPreset(fromPreset(saved))) === JSON.stringify(toPreset(draft));
+    if (!same && confirm(`“${name}” in the editor isn’t saved to My Patterns. Save it before downloading?`)) {
+      $("saveBtn").click();
+    }
+  }
+  const folders = { ...library.folders };
+  OLD_FOLDERS.forEach(f => delete folders[f]);
+  if (myPatterns.length) folders[MY_FOLDER] = myPatterns; else delete folders[MY_FOLDER];
+  const out = { ...library, folders };
+  const blob = new Blob([JSON.stringify(out)], { type: "application/json" });
+  const a = el("a", { href: URL.createObjectURL(blob), download: "gouly_presets.json" });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast("Downloaded gouly_presets.json");
+});
+
+$("copyJsonBtn").addEventListener("click", () =>
+  copyText(JSON.stringify({ [MY_FOLDER]: myPatterns }, null, 1), "Copied My Patterns JSON"));
+
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg); }
+  catch { toast("Couldn’t copy. Your browser blocked clipboard access."); }
+}
+
+function renderResults() {
+  const q = $("searchInput").value.trim().toLowerCase();
+  const ul = $("results"); ul.replaceChildren();
+  if (!q) return;
+  const words = q.split(/\s+/);
+  const hits = searchIndex.filter(x => words.every(w => x.key.includes(w))).slice(0, 40);
+  if (!hits.length) { ul.append(el("li", { class: "empty" }, "No presets match.")); return; }
+  hits.forEach(({ folder, p }) => {
+    ul.append(el("li", {}, strip(p),
+      el("span", { class: "name" }, p.name, el("br"), el("span", { class: "folder" }, `${folder} · ${EFFECTS[p.zones[0].effect] || "Effect " + p.zones[0].effect}`)),
+      el("button", { class: "btn small", type: "button",
+        onclick: () => { const d = fromPreset(p); d.name = p.name + " copy"; loadDraft(d); toast(`Copied “${p.name}” into the editor`); } }, "Use")));
+  });
+}
+$("searchInput").addEventListener("input", renderResults);
+
+// ---------- Roofline preview ----------
+const canvas = $("scene"), ctx = canvas.getContext("2d");
+let dots = [], W = 0, H = 0;
+// Roofline as normalised points: main gable, then a smaller gable on the right.
+const ROOF = [[0.04,0.80],[0.27,0.42],[0.50,0.80],[0.56,0.80],[0.72,0.56],[0.88,0.80],[0.96,0.80]];
+
+function layout() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const pts = ROOF.map(([x, y]) => [x * W, y * H]);
+  let len = 0; const segs = [];
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); segs.push(d); len += d; }
+  const n = Math.max(40, Math.round(len / (W < 600 ? 11 : 15)));
+  dots = [];
+  for (let k = 0; k < n; k++) {
+    let t = (k + 0.5) / n * len, i = 0;
+    while (t > segs[i] && i < segs.length - 1) { t -= segs[i]; i++; }
+    const f = t / segs[i];
+    dots.push([pts[i][0] + (pts[i+1][0]-pts[i][0]) * f, pts[i][1] + (pts[i+1][1]-pts[i][1]) * f]);
+  }
+}
+
+function drawHouse() {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#0B1322"); sky.addColorStop(1, "#1A2840");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  const pts = ROOF.map(([x, y]) => [x * W, y * H]);
+  ctx.fillStyle = "#0A0F19";
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  pts.forEach(p => ctx.lineTo(p[0], p[1]));
+  ctx.lineTo(pts[pts.length-1][0], H); ctx.lineTo(pts[0][0], H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(255,196,120,0.10)";
+  [[0.13,0.86],[0.33,0.86],[0.66,0.86],[0.78,0.86]].forEach(([x, y]) => ctx.fillRect(x * W, y * H, W * 0.06, H * 0.09));
+}
+
+function hash(i) { const s = Math.sin(i * 127.1) * 43758.5453; return s - Math.floor(s); }
+
+function frame(time) {
+  const t = playing ? time / 1000 : 0;
+  drawHouse();
+  const n = dots.length;
+  dots.forEach(([x, y], i) => {
+    const pos = (i + 0.5) / n * 100;
+    const zi = draft.zones.findIndex(z => pos >= z.start && pos < z.end);
+    let color = null, level = 1;
+    if (zi >= 0) {
+      const z = draft.zones[zi];
+      const first = Math.ceil(z.start / 100 * n - 0.5);
+      const rate = z.speed / 128 * 5;               // bulbs per second, rough
+      let idx = i - first;
+      if (z.effect !== 0) {
+        if (BREATHE.has(z.effect)) level = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(t * rate * 0.6));
+        else if (TWINKLE.has(z.effect)) level = Math.max(0.08, Math.sin(t * rate * 0.7 + hash(i) * 6.28));
+        else idx -= Math.floor(t * rate) * (z.direction ? -1 : 1);
+      }
+      const L = z.bulbs.length;
+      const b = z.bulbs[((idx % L) + L) % L];
+      if (!isOff(b)) color = displayRgb(b);
+    }
+    if (color) {
+      const [r, g, bl] = color;
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, 13);
+      glow.addColorStop(0, `rgba(${r},${g},${bl},${0.55 * level})`); glow.addColorStop(1, `rgba(${r},${g},${bl},0)`);
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(${r},${g},${bl},${0.35 + 0.65 * level})`;
+    } else ctx.fillStyle = "#2A3446";
+    ctx.beginPath(); ctx.arc(x, y, 3.4, 0, Math.PI * 2); ctx.fill();
+  });
+  requestAnimationFrame(frame);
+}
+
+$("playBtn").addEventListener("click", () => { playing = !playing; $("playBtn").textContent = playing ? "Pause" : "Play"; });
+$("playBtn").textContent = playing ? "Pause" : "Play";
+window.addEventListener("resize", layout);
+
+layout(); renderMine(); renderAll(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
