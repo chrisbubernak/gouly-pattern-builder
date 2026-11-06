@@ -117,6 +117,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .add-bulb { width: 34px; height: 34px; border-radius: 50%; border: 1px dashed var(--muted); background: transparent; cursor: pointer; font-size: 18px; color: var(--muted); }
 .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
 .swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+.swatch.wsw { font-size: 11px; font-weight: 700; color: #3A2A10; }
+.wlevel { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); min-width: 160px; }
 .bulb-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: var(--panel-2); border-radius: 10px; padding: 12px; }
 .bulb-tools input[type="color"] { width: 44px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: none; padding: 2px; cursor: pointer; }
 details summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
@@ -246,8 +248,9 @@ const FEATURED = [0,143,144,145,146,153,154,161,162,141,142,147,150,151,152,155,
 const BREATHE = new Set([8,27,141,142,151,155,42,92,107]);
 const TWINKLE = new Set([9,10,20,28,29,38,86,89,90,91,109,110,111,112,147,150,158,159,35,149,33,34,66,47]);
 
+const W_SWATCH = { name: "Warm white LED (matches Gouly’s warm presets)", display: "#FFC37A" };
 const SWATCHES = [
-  ["White", [255,255,255]], ["Warm white", [255,180,107]], ["Green", [0,255,82]], ["Celtic green", [0,131,72]],
+  ["White", [255,255,255]], ["Warm white (RGB mix)", [255,180,107]], ["Green", [0,255,82]], ["Celtic green", [0,131,72]],
   ["Red", [255,0,0]], ["Orange", [255,120,0]], ["Gold", [255,193,42]], ["Yellow", [255,247,0]],
   ["Blue", [0,0,255]], ["Sky", [0,180,255]], ["Purple", [140,40,230]], ["Pink", [255,60,170]]
 ];
@@ -399,6 +402,9 @@ function renderEditor() {
   const picker = el("input", { type: "color", value: hex(sb.rgb), "aria-label": "Bulb colour",
     oninput: e => { sb.rgb = fromHex(e.target.value); sb.ww = 0; sb.cw = 0; renderAll(); } });
   const sw = el("div", { class: "swatches" });
+  const wsw = el("button", { type: "button", class: "swatch wsw", title: W_SWATCH.name, "aria-label": W_SWATCH.name,
+    onclick: () => { sb.rgb = [0,0,0]; sb.ww = 255; sb.cw = 0; renderAll(); } }, "W");
+  wsw.style.background = W_SWATCH.display; sw.append(wsw);
   SWATCHES.forEach(([n, rgb]) => {
     const s = el("button", { type: "button", class: "swatch", title: n, "aria-label": n,
       onclick: () => { sb.rgb = rgb.slice(); sb.ww = 0; sb.cw = 0; renderAll(); } });
@@ -407,6 +413,10 @@ function renderEditor() {
   const tools = el("div", { class: "bulb-tools" },
     el("strong", { style: "font-weight:600" }, `Bulb ${selectedBulb + 1}`), picker, sw,
     el("button", { type: "button", class: "btn small", onclick: () => { sb.rgb = [0,0,0]; sb.ww = 0; sb.cw = 0; renderAll(); } }, "Off"),
+    el("label", { class: "wlevel" }, el("span", {}, `Warm white LED ${sb.ww}`),
+      el("input", { type: "range", min: 0, max: 255, value: sb.ww, "aria-label": "Warm white LED level",
+        oninput: e => { sb.ww = Number(e.target.value); e.target.previousSibling.textContent = `Warm white LED ${sb.ww}`; },
+        onchange: () => renderAll() })),
     el("button", { type: "button", class: "btn small danger", disabled: z.bulbs.length <= 1,
       onclick: () => { z.bulbs.splice(selectedBulb, 1); selectedBulb = Math.max(0, selectedBulb - 1); renderAll(); } }, "Remove"));
 
